@@ -43,6 +43,15 @@ def binary_crossover(m, f):
             child_2.append(m[i])
     return child_1,child_2
 
+def single_point_crossover(m,f):
+    size = len(m)
+    child_1 = []
+    child_2 = []
+    j = random.randint(1,size-1)
+    child_1 = m[:j] + f[j:]
+    child_2 = f[:j] + m[j:]
+    return child_1,child_2
+
 def mutation(board):
     size = len(board)
     random_queen = random.randint(0, size-1)
@@ -56,8 +65,14 @@ def roulette_selection(population, fitness_values):
     for fitness in fitness_values:
         probability = fitness / total_fitness
         probabilities.append(probability)    
-    selected_index = random.choices(range(len(population)), weights=probabilities)[0]
-    return population[selected_index]
+    m = random.choices(range(len(population)), weights=probabilities)[0]
+    pop2 = population[:m] + population[m+1:]
+    prob2 = probabilities[:m] + probabilities[m+1:]
+    f = random.choices(range(len(pop2)), weights=prob2)[0]
+
+    return m,f
+    #selected_index = random.choices(range(len(population)), weights=probabilities)[0] 
+    #return population[selected_index]
 
 
 def genetic_algorithm(population,population_size,generation_size,mutation_rate,board_size,elitism = True):
@@ -79,8 +94,11 @@ def genetic_algorithm(population,population_size,generation_size,mutation_rate,b
 
 
         if(current_best_board_fitness == 1.0):
+
             print("Solution find in generation: ",end="")
             print(gen_i)
+            print(population_size)
+            print(len(population))
             value_counts = Counter(fitness_values)
             values = list(value_counts.keys())
             counts = list(value_counts.values())
@@ -94,12 +112,24 @@ def genetic_algorithm(population,population_size,generation_size,mutation_rate,b
         k = 0
         if elitism:
             next_generation.append(current_best_board)
+            m,f = roulette_selection(population,fitness_values)
+            male = population[m]
+            female = population[f]
+            #male = roulette_selection(population,fitness_values)
+            #female = roulette_selection(population,fitness_values)
+            child_1,child_2 = binary_crossover(male,female)
+            if random.random() < mutation_rate:
+                child_1 = mutation(child_1)
+            next_generation.append(child_1)
             k = 1
 
 
         for i in range(population_size//2-k):
-            male = roulette_selection(population,fitness_values)
-            female = roulette_selection(population,fitness_values)
+            m,f = roulette_selection(population,fitness_values)
+            male = population[m]
+            female = population[f]
+            #male = roulette_selection(population,fitness_values)
+            #female = roulette_selection(population,fitness_values)
             child_1,child_2 = binary_crossover(male,female)
             if random.random() < mutation_rate:
                 child_1 = mutation(child_1)
@@ -108,6 +138,8 @@ def genetic_algorithm(population,population_size,generation_size,mutation_rate,b
             next_generation.append(child_1)
             next_generation.append(child_2)
         
+
+
         population = next_generation
         value_counts = Counter(fitness_values)
         values = list(value_counts.keys())
@@ -115,6 +147,8 @@ def genetic_algorithm(population,population_size,generation_size,mutation_rate,b
         statistics.append([values,counts])
         best_boards.append(current_best_board)
     print("Could not find the solution.")
+    print(population_size)
+    print(len(population))
     return best_boards,statistics
 
 #best_boards[-1] = best_board overall
@@ -173,12 +207,17 @@ def update_solution(val, queens_solutions, ax):
     plt.draw()
 
 if __name__ == "__main__":
-    board_size = 14
-    population_size = 1000
-    population = initialization(population_size,board_size)
+    board_size = 11
+    population_size = 3000
     elitism = False
-    generation_size = 150
-    best_boards,statistics = genetic_algorithm(population,population_size,generation_size,0.01,board_size,elitism)
+    generation_size = 400
+    rez = []
+    for i in range(4):
+        population = initialization(population_size,board_size)
+        best_boards,statistics = genetic_algorithm(population,population_size,generation_size,0.05,board_size,elitism)
+        rez.append(len(best_boards))
+    print(rez)
+    print(rez/200)
     print(best_boards[-1])
     print(statistics[-1])
     data_list = statistics
@@ -222,32 +261,3 @@ if __name__ == "__main__":
     print(best_boards)
     plt.show()
 
-
-"""
-    fig, ax = plt.subplots()
-    plt.subplots_adjust(bottom=0.25)
-
-    current_index = 0
-    x_data, y_data = data_list[current_index]
-
-    scatter = ax.scatter(x_data, y_data, label=f'Generation {current_index + 1}', color='blue')
-
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, population_size)
-
-    slider_ax = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor='lightgoldenrodyellow')
-    slider = Slider(slider_ax, 'Select generation', 1, len(data_list), valinit=1, valstep=1)
-
-    def update(val):
-        global current_index
-        current_index = int(val) - 1
-        x_data, y_data = data_list[current_index]
-        scatter.set_offsets(np.column_stack((x_data, y_data)))
-        scatter.set_label(f'Generation {current_index + 1}')
-        ax.legend()
-        fig.canvas.draw_idle()
-    
-    slider.on_changed(update)
-
-    plt.show()
-"""
